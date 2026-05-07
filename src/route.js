@@ -1,12 +1,17 @@
 import express from 'express'
 import RSAUtils from './rsaUtils.js';
+import { insertKey, getPairByPublic } from '../data/queries.js';
+import { nanoid } from 'nanoid';
+
 const router = express.Router()
 
 router.post('/generate-keys', async (req, res) => {
   var keys = null
   try {
     keys = await RSAUtils.generateKeyPair();
-    res.json({ message: 'Keys generated successfully', keys });
+    const pub= keys.publicKey
+    insertKey.get(nanoid(), keys.publicKey,keys.privateKey, Date.now())
+    res.json({ message: 'Keys generated successfully', pub });
   } catch (err) {
     res.status(500).json({ error: 'Error generating keys', details: err.message });
   }
