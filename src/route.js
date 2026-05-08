@@ -19,14 +19,17 @@ router.post('/generate-keys', async (req, res) => {
 
 router.post('/encrypt', (req, res) => {
   const { message, publicKey } = req.body
-  const ciphertext = RSAUtils.encrypt(publicKey, message).toString("base64")
-  res.json({ ciphertext})
+  try{
+    const ciphertext = RSAUtils.encrypt(publicKey, message).toString("base64")
+    res.json({ ciphertext})
+  } catch (err) {
+    res.status(500).json({ error: 'Error generating decrypt', details: err.message });
+  }
 })
 
 router.post('/decrypt', (req, res) => {
     const { ciphertext , publicKey} = req.body
     const keys = getPairByPublic.get(publicKey)
-    console.log(keys)
     try {
       var output = RSAUtils.decrypt(keys.private_key, ciphertext).toString("utf8")
       res.json({ message: 'Decrypted successfully', output });
