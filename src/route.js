@@ -24,9 +24,11 @@ router.post('/encrypt', (req, res) => {
 })
 
 router.post('/decrypt', (req, res) => {
-    const { ciphertext , privateKey} = req.body
+    const { ciphertext , publicKey} = req.body
+    const keys = getPairByPublic.get(publicKey)
+    console.log(keys)
     try {
-      var output = RSAUtils.decrypt(privateKey, ciphertext).toString("utf8")
+      var output = RSAUtils.decrypt(keys.private_key, ciphertext).toString("utf8")
       res.json({ message: 'Decrypted successfully', output });
     } catch (err) {
       res.status(500).json({ error: 'Error generating decrypt', details: err.message });

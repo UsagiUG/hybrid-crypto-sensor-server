@@ -7,11 +7,11 @@ const insertKey = database.prepare(`
 `);
 
 const getPairByPublic = database.prepare(`
-  SELECT * FROM keys WHERE public_key = ?
+  SELECT * FROM keys WHERE public_key = (?)
 `);
 
 const getPairByPrivate = database.prepare(`
-  SELECT * FROM keys WHERE private_key = ?
+  SELECT * FROM keys WHERE private_key = (?)
 `);
 
 export {
