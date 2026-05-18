@@ -10,8 +10,12 @@ from cryptography.hazmat.primitives.padding import PKCS7
 from cryptography.hazmat.primitives.serialization import load_pem_public_key
 from nicegui import ui
 
-def get_server_public_key():
-    return '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt8naqge5WFHlloyPDMwN\n3JZoV26EPzfhdC7MkYD6MLwvOesXn2lM9PBNt8kjEyb8lBnAyWYmWA/HJ0GiP07l\n++NoIYSCJIJttQhzD+LDzUjWhf5poOWDwE7GZlAQ2Aqj+ffBdOI7D2RBN+4YlT2t\ne0UmNJ7Y8AvukGHDMW8TCN8Arp6Rx/wqI1y61AH6IfQ+igvdMjTmKGlXuMNnu+bO\nLg8ig7jy4FtLNHRxnL/LTMnDH7+rXV72cT1Rw8yAWwhOQS6D8IYsWhpJ8YnC7ghw\nHdNuUjm6SfpZKHuJyz/yg6siM3TS7xlAXVT2yktBw5YnN0Da7duOMqkODZupMjGw\nrwIDAQAB\n-----END PUBLIC KEY-----\n'
+def get_server_public_key() -> str:
+    url='http://localhost:3000/public-key' 
+    response = requests.get(url)
+    response.raise_for_status()
+    return response.json()['pub']
+    # return '-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAt8naqge5WFHlloyPDMwN\n3JZoV26EPzfhdC7MkYD6MLwvOesXn2lM9PBNt8kjEyb8lBnAyWYmWA/HJ0GiP07l\n++NoIYSCJIJttQhzD+LDzUjWhf5poOWDwE7GZlAQ2Aqj+ffBdOI7D2RBN+4YlT2t\ne0UmNJ7Y8AvukGHDMW8TCN8Arp6Rx/wqI1y61AH6IfQ+igvdMjTmKGlXuMNnu+bO\nLg8ig7jy4FtLNHRxnL/LTMnDH7+rXV72cT1Rw8yAWwhOQS6D8IYsWhpJ8YnC7ghw\nHdNuUjm6SfpZKHuJyz/yg6siM3TS7xlAXVT2yktBw5YnN0Da7duOMqkODZupMjGw\nrwIDAQAB\n-----END PUBLIC KEY-----\n'
 
 # sensor data is made manually
 def get_sensor_data():
