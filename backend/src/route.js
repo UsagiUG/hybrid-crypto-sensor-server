@@ -1,9 +1,18 @@
 import express from 'express'
 import RSAUtils from './rsaUtils.js';
-import { insertKey, getPairByPublic } from '../data/queries.js';
+import { insertKey, getPairByPublic, getLatestKey } from '../data/queries.js';
 import { nanoid } from 'nanoid';
 
 const router = express.Router()
+
+router.get('/public-key', (req, res) => {
+  try{
+    const keys = getLatestKey.get()
+    res.json({pub: keys.publicKey});
+  } catch (err) {
+    res.status(500).json({error: 'Error obtaining latest key', details: err.message});
+  }
+})
 
 router.post('/generate-keys', async (req, res) => {
   var keys = null
