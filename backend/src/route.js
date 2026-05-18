@@ -5,13 +5,26 @@ import { nanoid } from 'nanoid';
 
 const router = express.Router()
 
+// router.post('/generate-keys', async (req, res) => {
+//   var keys = null
+//   try {
+//     keys = await RSAUtils.generateKeyPair();
+//     const pub= keys.publicKey
+//     insertKey.get(nanoid(), keys.publicKey,keys.privateKey, Date.now())
+//     res.json({ message: 'Keys generated successfully', pub });
+//   } catch (err) {
+//     res.status(500).json({ error: 'Error generating keys', details: err.message });
+//   }
+// });
+
 router.post('/generate-keys', async (req, res) => {
   var keys = null
   try {
     keys = await RSAUtils.generateKeyPair();
     const pub= keys.publicKey
+    const priv= keys.privateKey
     insertKey.get(nanoid(), keys.publicKey,keys.privateKey, Date.now())
-    res.json({ message: 'Keys generated successfully', pub });
+    res.json({ message: 'Keys generated successfully', pub, priv});
   } catch (err) {
     res.status(500).json({ error: 'Error generating keys', details: err.message });
   }
