@@ -14,8 +14,13 @@ const getPairByPrivate = database.prepare(`
   SELECT * FROM keys WHERE private_key = (?)
 `);
 
+const getLatestKey = database.prepare(`
+  SELECT * FROM keys ORDER BY created_at DESC LIMIT 1
+`);
+
 export {
   insertKey,
   getPairByPrivate,
-  getPairByPublic
+  getPairByPublic,
+  getLatestKey
 };
