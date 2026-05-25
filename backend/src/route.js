@@ -1,6 +1,6 @@
 import express from 'express'
 import RSAUtils from './rsaUtils.js';
-import { insertKey, getPairByPublic, getLatestKey } from '../data/queries.js';
+import { insertKey, getPairByPublic, getLatestKey, insertNonce } from '../data/queries.js';
 import { nanoid } from 'nanoid';
 
 const router = express.Router()
@@ -15,10 +15,37 @@ router.get('/public-key', (req, res) => {
 })
 
 router.post('/telemetry', (req, res) => {
+  // const response = {}
   const {sensor_id, transmission_timestamp, encrypted_session_key, nonce, ciphertext, tag} = req.body;
-  console.log(typeof sensor_id);
-  console.log(typeof nonce);
-  res.json({message: 'Message acquired'});
+
+
+  // checking id-nonce duplicate
+  try{
+    const insertNonceResult = insertNonce.run(sensor_id, nonce);
+    console.log(insertNonceResult)
+    // response.nonce_insertion = insertNonceResult
+  } catch (err) {
+    if (err.message.includes('UNIQUE constraint failed')) {
+      res.status(400).json({error: 'duplicate id-nonce pair' });
+    }
+    res.status(500).json({error: 'Error inserting nonce', details: err.message});
+  }
+
+  // decrypt session key
+  let private_key;
+  try{
+    private_key = getLatestKey.get().private_key;
+  } catch (err) {
+    // console.error("Can't get latest private_key")
+    res.status(500).json({error: "Can't get latest private_key", details: err.message});
+  }
+  // console.log(private_key)
+  // console.log(encrypted_session_key)
+  const session_key = RSAUtils.decrypt(private_key, encrypted_session_key)
+  // console.log(session_key);
+  // console.log(typeof session_key);
+  // console.log(Buffer.isBuffer(session_key));
+  res.json({ok: "ok"})
 });
 
 router.post('/generate-keys', async (req, res) => {

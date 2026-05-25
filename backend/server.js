@@ -17,10 +17,11 @@ app.listen(3000, async () => {
     const existing = getLatestKey.get()
     if (!existing) {
       const keys = await RSAUtils.generateKeyPair()
-      insertKey.get(nanoid(), keys.publicKey, keys.privateKey, Date.now())
+      insertKey.run(nanoid(), keys.publicKey, keys.privateKey, Date.now())
       console.log('RSA keys generated successfully')
     } else {
       console.log('RSA keys already exist')
+      console.log(getLatestKey.get().public_key)
     }
   } catch (err) {
     console.error('Error generating RSA keys', err.message)

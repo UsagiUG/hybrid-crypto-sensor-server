@@ -6,6 +6,11 @@ const insertKey = database.prepare(`
   VALUES (?, ?, ?, ?)
 `);
 
+const insertNonce = database.prepare(`
+  INSERT INTO nonces (id, nonce)
+  VALUES (?, ?)
+`);
+
 const getPairByPublic = database.prepare(`
   SELECT * FROM keys WHERE public_key = (?)
 `);
@@ -22,5 +27,6 @@ export {
   insertKey,
   getPairByPrivate,
   getPairByPublic,
-  getLatestKey
+  getLatestKey,
+  insertNonce
 };
