@@ -8,11 +8,18 @@ const router = express.Router()
 router.get('/public-key', (req, res) => {
   try{
     const keys = getLatestKey.get()
-    res.json({pub: keys.publicKey});
+    res.json({public_key: keys.public_key});
   } catch (err) {
     res.status(500).json({error: 'Error obtaining latest key', details: err.message});
   }
 })
+
+router.post('/telemetry', (req, res) => {
+  const {sensor_id, transmission_timestamp, encrypted_session_key, nonce, ciphertext, tag} = req.body;
+  console.log(typeof sensor_id);
+  console.log(typeof nonce);
+  res.json({message: 'Message acquired'});
+});
 
 router.post('/generate-keys', async (req, res) => {
   var keys = null

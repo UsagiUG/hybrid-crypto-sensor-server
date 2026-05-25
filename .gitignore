@@ -2,4 +2,5 @@ backend/node_modules/
 *.db
 .env
 frontend/venv/
+# frontend/.venv/
 .vscode/

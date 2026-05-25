@@ -13,4 +13,10 @@ CREATE TABLE IF NOT EXISTS keys (
 
 database.exec(initDatabase);
 
+// const nonce_db = new DatabaseSync(`${import.meta.dirname}/nonce.db`);
+
+// nonce_db.exec(`
+//   id    
+// `);
+
 export default database;

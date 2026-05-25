@@ -20,7 +20,7 @@ app.listen(3000, async () => {
       insertKey.get(nanoid(), keys.publicKey, keys.privateKey, Date.now())
       console.log('RSA keys generated successfully')
     } else {
-      console.group('RSA keys already exist')
+      console.log('RSA keys already exist')
     }
   } catch (err) {
     console.error('Error generating RSA keys', err.message)
