@@ -1,5 +1,6 @@
 import express from 'express'
 import RSAUtils from './rsaUtils.js';
+import AESUtils from './aesUtils.js';
 import { insertKey, getPairByPublic, getLatestKey, insertNonce } from '../data/queries.js';
 import { nanoid } from 'nanoid';
 
@@ -16,8 +17,11 @@ router.get('/public-key', (req, res) => {
 
 router.post('/telemetry', (req, res) => {
   // const response = {}
-  const {sensor_id, transmission_timestamp, encrypted_session_key, nonce, ciphertext, tag} = req.body;
-
+  // const {sensor_id, transmission_timestamp, encrypted_session_key, nonce, ciphertext, tag} = req.body;
+  const {aad, nonce, ciphertext, tag} = req.body;
+  const {sensor_id, transmission_timestamp, encrypted_session_key} = aad;
+  // console.log("aad: ", aad);
+  // console.log("aad (Buffer): ", Buffer.from(aad, 'base64'));
 
   // checking id-nonce duplicate
   try{
@@ -42,9 +46,11 @@ router.post('/telemetry', (req, res) => {
   // console.log(private_key)
   // console.log(encrypted_session_key)
   const session_key = RSAUtils.decrypt(private_key, encrypted_session_key)
-  // console.log(session_key);
+  // console.log(nonce);
   // console.log(typeof session_key);
   // console.log(Buffer.isBuffer(session_key));
+  const decrypted_message = AESUtils.decrypt(session_key, req.body)
+  console.log(decrypted_message)
   res.json({ok: "ok"})
 });
 

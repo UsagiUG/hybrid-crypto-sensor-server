@@ -31,14 +31,23 @@ def build_payload(public_key_pem: str) -> dict:
 		'transmission_timestamp': datetime.now(tz_wib).isoformat(),
 		'encrypted_session_key': base64.b64encode(encrypted_session_key).decode('utf-8'),
 	}
-	aad_bytes = json.dumps(aad).encode('utf-8')
+	aad_bytes = json.dumps(aad, separators=(',', ':'), sort_keys=True).encode('utf-8')
 
 	encrypted_raw = aesgcm.encrypt(iv, plaintext_bytes, aad_bytes)
 	ciphertext = encrypted_raw[:-16]
 	tag = encrypted_raw[-16:]
 
+	print('aad_bytes ', aad_bytes)
+	print('repr(aad_bytes) ', repr(aad_bytes))
+	# return {
+	# 	**aad,
+	# 	'nonce': base64.b64encode(iv).decode('utf-8'),
+	# 	'ciphertext': base64.b64encode(ciphertext).decode('utf-8'),
+	# 	'tag': base64.b64encode(tag).decode('utf-8')
+	# }
+
 	return {
-		**aad,
+		'aad': aad,
 		'nonce': base64.b64encode(iv).decode('utf-8'),
 		'ciphertext': base64.b64encode(ciphertext).decode('utf-8'),
 		'tag': base64.b64encode(tag).decode('utf-8')

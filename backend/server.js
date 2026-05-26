@@ -21,7 +21,7 @@ app.listen(3000, async () => {
       console.log('RSA keys generated successfully')
     } else {
       console.log('RSA keys already exist')
-      console.log(getLatestKey.get().public_key)
+      // console.log(getLatestKey.get().public_key)
     }
   } catch (err) {
     console.error('Error generating RSA keys', err.message)
