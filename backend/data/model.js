@@ -13,12 +13,22 @@ CREATE TABLE IF NOT EXISTS keys (
 
 const initNonceTable = `
   CREATE TABLE IF NOT EXISTS nonces(
-  id    INTEGER NOT NULL, 
+  sensor_id    INTEGER NOT NULL, 
   nonce TEXT NOT NULL,
-  UNIQUE(id, nonce)
+  UNIQUE(sensor_id, nonce)
   );
 `;
+
+const initSessionKeysTable = `
+  CREATE TABLE IF NOT EXISTS session_keys(
+  sensor_id     INTEGER NOT NULL,
+  session_key   TEXT NOT NULL,
+  created_at    INTEGER NOT NULL
+  );
+`;
+
 database.exec(initRsaKeysTable);
-database.exec(initNonceTable)
+database.exec(initNonceTable);
+database.exec(initSessionKeysTable);
 
 export default database;

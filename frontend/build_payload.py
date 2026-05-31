@@ -14,7 +14,7 @@ from sensor_simulation import sensor_simulation
 
 
 
-def build_payload(public_key_pem: str) -> dict:
+def build_payload(public_key_pem: str, send_no_session_key: bool = False, return_aad_bytes: bool = False) -> dict:
 	tz_wib = timezone(timedelta(hours=7))
 
 	# this one gonna cascade depending on the result. None is not a valid session_key. You need to use the current session_key
@@ -29,7 +29,7 @@ def build_payload(public_key_pem: str) -> dict:
 	aad = {
 		'sensor_id': 1,
 		'transmission_timestamp': datetime.now(tz_wib).isoformat(),
-		'encrypted_session_key': base64.b64encode(encrypted_session_key).decode('utf-8'),
+		'encrypted_session_key': base64.b64encode(encrypted_session_key).decode('utf-8') if not send_no_session_key else None,
 	}
 	aad_bytes = json.dumps(aad, separators=(',', ':'), sort_keys=True).encode('utf-8')
 
@@ -37,8 +37,8 @@ def build_payload(public_key_pem: str) -> dict:
 	ciphertext = encrypted_raw[:-16]
 	tag = encrypted_raw[-16:]
 
-	print('aad_bytes ', aad_bytes)
-	print('repr(aad_bytes) ', repr(aad_bytes))
+	# print('aad_bytes ', aad_bytes)
+	# print('repr(aad_bytes) ', repr(aad_bytes))
 	# return {
 	# 	**aad,
 	# 	'nonce': base64.b64encode(iv).decode('utf-8'),
@@ -47,7 +47,7 @@ def build_payload(public_key_pem: str) -> dict:
 	# }
 
 	return {
-		'aad': aad,
+		'aad': aad if not return_aad_bytes else aad_bytes.decode('utf-8'),
 		'nonce': base64.b64encode(iv).decode('utf-8'),
 		'ciphertext': base64.b64encode(ciphertext).decode('utf-8'),
 		'tag': base64.b64encode(tag).decode('utf-8')
