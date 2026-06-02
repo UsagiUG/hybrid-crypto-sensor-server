@@ -195,15 +195,15 @@ class EdgeGateway:
 
 
 ## Contact form
-# sensor_id = st.number_input("sensor_id", value=st.session_state.get('sensor_id', 0), key='sensor_id') # input widget for contact email
+sensor_id = st.number_input("sensor_id", value=st.session_state.get('sensor_id', 0), key='sensor_id') # input widget for contact email
 temperature = st.number_input("temperature", value=st.session_state.get('temperature', 0), key='temperature') # input widget for contact email
 air_humidity = st.number_input("air_humidity", value=st.session_state.get('air_humidity', 0), key='air_humidity') # input widget for message
 soil_moisture = st.number_input("soil_moisture", value=st.session_state.get('soil_moisture', 0), key='soil_moisture') # input widget for message
 soil_ph = st.number_input("soil_ph", value=st.session_state.get('soil_ph', 0), key='soil_ph') # input widget for message
-obj = EdgeGateway(1)
 
 if st.button("Send", type="primary"):
     server_public_key = get_public_key()
+    obj = EdgeGateway(sensor_id)
 
     url = 'http://localhost:3000/telemetry'
 
@@ -213,14 +213,13 @@ if st.button("Send", type="primary"):
         
     durations1 = []
 
-    for _ in range(1):
-        start = time.perf_counter()
-        obj.generate_sensor_data(temperature, air_humidity, soil_moisture, soil_ph)
-        payload = obj.build_payload(server_public_key)
-        
-        response=requests.post(url, json=payload)
-        
-        end = time.perf_counter()
-        durations1.append(end - start)
+    start = time.perf_counter()
+    obj.generate_sensor_data(temperature, air_humidity, soil_moisture, soil_ph)
+    payload = obj.build_payload(server_public_key)
+    
+    response=obj.post(url, json=payload)
+    
+    end = time.perf_counter()
+    durations1.append(end - start)
 
     st.text(response.json())
