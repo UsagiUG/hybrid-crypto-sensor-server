@@ -111,7 +111,7 @@ router.post('/telemetry', (req, res) => {
     }
   }
 
-  console.log({decrypted_message: decrypted_message});
+  console.log({time: new Date().toLocaleString("id-ID"), decrypted_message: decrypted_message});
   res.json({decryption: "Success"});
 });
 
