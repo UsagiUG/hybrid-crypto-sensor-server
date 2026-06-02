@@ -26,6 +26,7 @@ router.get('/public-key', (req, res) => {
 router.post('/telemetry', (req, res) => {
   const {aad, nonce, ciphertext, tag} = req.body;
   const {sensor_id, transmission_timestamp, encrypted_session_key} = aad;
+  console.log({aad: aad})
   
   // checking id-nonce duplicate
   try{
@@ -35,7 +36,7 @@ router.post('/telemetry', (req, res) => {
       return invalidRequest(res);
     }
   } catch(err) {
-    console.error("Can't check id-nonce dupe", {details: err.message})
+    console.error("Can't check id-nonce dupe", {details: err.message, time: new Date().toLocaleString("id-ID")})
     return serverError(res);
   }
 
