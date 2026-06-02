@@ -2,3 +2,4 @@ cryptography
 requests
 numpy
 scipy
+streamlit
