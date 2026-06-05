@@ -1,5 +1,8 @@
 backend/node_modules/
 *.db
 .env
-frontend/venv/
+venv/
+.venv/
 .vscode/
+*.py
+__pycache__/

@@ -6,6 +6,24 @@ const insertKey = database.prepare(`
   VALUES (?, ?, ?, ?)
 `);
 
+const insertNonce = database.prepare(`
+  INSERT INTO nonces (sensor_id, nonce)
+  VALUES (?, ?)
+`);
+
+const getNonce = database.prepare(`
+  SELECT 1 FROM nonces WHERE sensor_id = (?) AND nonce = (?) LIMIT 1
+  `);
+
+const insertSessionKey = database.prepare(`
+  INSERT INTO session_keys (sensor_id, session_key, created_at)
+  VALUES (?, ?, ?)
+  `);
+
+const getSessionKey = database.prepare(`
+  SELECT session_key FROM session_keys WHERE sensor_id = (?) ORDER BY created_at DESC LIMIT 1
+  `);
+
 const getPairByPublic = database.prepare(`
   SELECT * FROM keys WHERE public_key = (?)
 `);
@@ -22,5 +40,9 @@ export {
   insertKey,
   getPairByPrivate,
   getPairByPublic,
-  getLatestKey
+  getLatestKey,
+  insertNonce,
+  insertSessionKey,
+  getNonce,
+  getSessionKey
 };

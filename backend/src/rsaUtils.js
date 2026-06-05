@@ -33,10 +33,20 @@ const RSAUtils = {
             Buffer.from(plaintext)
         ),
 
-  // Decrypt Data with Private Key
+// //   Decrypt Data with Private Key
     decrypt: (privateKey, encrypted) => 
-        crypto.privateDecrypt(privateKey, Buffer.from(encrypted,"base64"))
+        crypto.privateDecrypt(
+            {
+                key: privateKey,
+                padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+                oaepHash: 'sha256'
+            },
+        Buffer.from(encrypted,"base64"))
     ,
+
+    // decrypt: (privateKey, encrypted) => 
+    //     crypto.privateDecrypt(privateKey, Buffer.from(encrypted,"base64"))
+    // ,
 
   // Sign Data with Private Key
     sign: (message) => {

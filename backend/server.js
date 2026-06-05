@@ -7,22 +7,23 @@ import { nanoid } from 'nanoid'
 
 const app = express()
 
-app.use(express.json())
+app.use(express.json({ limit: '5000kb' }));
 app.use(express.urlencoded({ extended: false }))
 app.use(router)
 app.listen(3000, async () => {
   console.log('Server is running on port 3000')
 
-  try{
-    const existing = getLatestKey.get()
-    if (!existing) {
-      const keys = await RSAUtils.generateKeyPair()
-      insertKey.get(nanoid(), keys.publicKey, keys.privateKey, Date.now())
-      console.log('RSA keys generated successfully')
-    } else {
-      console.group('RSA keys already exist')
-    }
-  } catch (err) {
-    console.error('Error generating RSA keys', err.message)
-  }
+  // try{
+  //   const existing = getLatestKey.get()
+  //   if (!existing) {
+  //     const keys = await RSAUtils.generateKeyPair()
+  //     insertKey.run(nanoid(), keys.publicKey, keys.privateKey, Date.now())
+  //     console.log({public: keys.publicKey, private: keys.privateKey})
+  //   } else {
+  //     console.log('RSA keys already exist')
+  //     // console.log(getLatestKey.get().public_key)
+  //   }
+  // } catch (err) {
+  //   console.error('Error generating RSA keys', err.message)
+  // }
 })
