@@ -1,8 +1,10 @@
-import express from 'express'
+import express from 'express';
 import RSAUtils from './rsaUtils.js';
 import AESUtils from './aesUtils.js';
 import { insertKey, getPairByPublic, getLatestKey, insertNonce, getNonce, getSessionKey, insertSessionKey } from '../data/queries.js';
 import { nanoid } from 'nanoid';
+import {RSA_PRIVATE_KEY, ECC_PRIVATE_KEY} from './cryptoConfig.js';
+import ECCUtils from './eccUtils.js';
 
 function invalidRequest(res){
   return res.status(400).json({error: 'invalid request'});
@@ -23,9 +25,73 @@ router.get('/public-key', (req, res) => {
   }
 })
 
-router.post('/telemetry', (req, res) => {
+
+function rsa(req, res) {
   const {aad, nonce, ciphertext, tag} = req.body;
-  const {sensor_id, transmission_timestamp, encrypted_session_key} = aad;
+  const {sensor_id, mode, transmission_timestamp, key} = aad;
+  let private_key;
+  let session_key;
+    try{
+      private_key = RSA_PRIVATE_KEY;
+    } catch (err) {
+      console.error("Can't get latest private_key", {details: err.message});
+      return serverError(res);
+    }
+    try{
+      session_key = RSAUtils.decrypt(private_key, key)
+    } catch (err) {
+      console.error("Can't decrypt session key", {details: err.message});
+      return invalidRequest(res);
+    }
+
+  // decrypt message
+  let decrypted_message;
+  try{
+    decrypted_message = AESUtils.decrypt(session_key, req.body)
+  } catch(err) {
+    console.error("Can't decrypt with this session_key", {details: err.message});
+    return invalidRequest(res);
+  }
+
+  return decrypted_message;
+}
+
+function ecc(req, res) {
+  const {aad, nonce, ciphertext, tag} = req.body;
+  const {sensor_id, mode, transmission_timestamp, key} = aad;
+  let private_key;
+  let session_key;
+    try{
+      private_key = ECC_PRIVATE_KEY;
+    } catch (err) {
+      console.error("Can't get latest private_key", {details: err.message});
+      return serverError(res);
+    }
+    try{
+      session_key = ECCUtils.decrypt(private_key, key)
+    } catch (err) {
+      console.error("Can't decrypt session key", {details: err.message});
+      return invalidRequest(res);
+    }
+
+  // decrypt message
+  let decrypted_message;
+  try{
+    decrypted_message = AESUtils.decrypt(session_key, req.body)
+  } catch(err) {
+    console.error("Can't decrypt with this session_key", {details: err.message});
+    return invalidRequest(res);
+  }
+
+  return decrypted_message;
+}
+
+const durations = [];
+
+router.post('/telemetry', (req, res) => {
+  const start = performance.now();
+  const {aad, nonce, ciphertext, tag} = req.body;
+  const {sensor_id, mode, transmission_timestamp, key} = aad;
   console.log({aad: aad})
   
   // checking id-nonce duplicate
@@ -57,40 +123,25 @@ router.post('/telemetry', (req, res) => {
     return invalidRequest(res);
   }
 
-  // decrypt session key
-  let private_key;
-  let session_key;
-  if (encrypted_session_key === null) {
-    try{
-      session_key = getSessionKey.get(sensor_id);
+  let decrypted_message
+  if (mode === 'rsa') {
+    try {
+      decrypted_message = rsa(req, res)
     } catch(err) {
-      console.error("No previous session_key", {details: err.message});
-      return invalidRequest(res);
-    }
-  } else {
-    try{
-      private_key = getLatestKey.get().private_key;
-    } catch (err) {
-      console.error("Can't get latest private_key", {details: err.message});
+      console.error("error rsa", {details: err.message});
       return serverError(res);
     }
-    try{
-      session_key = RSAUtils.decrypt(private_key, encrypted_session_key)
-    } catch (err) {
-      console.error("Can't decrypt session key", {details: err.message});
-      return invalidRequest(res);
+  } else {
+    try {
+      decrypted_message = ecc(req, res)
+    } catch(err) {
+      console.error("error ecc", {details: err.message});
+      return serverError(res);
     }
   }
-
-  // decrypt message
-  let decrypted_message
-  try{
-    decrypted_message = AESUtils.decrypt(session_key, req.body)
-  } catch(err) {
-    console.error("Can't decrypt with this session_key", {details: err.message});
-    return invalidRequest(res);
-  }
-
+  const end = performance.now();
+  durations.push(end - start);
+  
   // save nonce
   try{
     const insertNonceResult = insertNonce.run(sensor_id, nonce);
@@ -101,57 +152,67 @@ router.post('/telemetry', (req, res) => {
   }
 
   // save session_key
-  if (encrypted_session_key !== null) {
-    try{
-      const insertSessionKeyResult = insertSessionKey.run(sensor_id, session_key, sent_time);
-      console.log(insertSessionKeyResult);
-    } catch (err) {
-      console.error("Cannot save session_key", {details: err.message});
-      return serverError(res);
-    }
-  }
+  // if (encrypted_session_key !== null) {
+  //   try{
+  //     const insertSessionKeyResult = insertSessionKey.run(sensor_id, session_key, sent_time);
+  //     console.log(insertSessionKeyResult);
+  //   } catch (err) {
+  //     console.error("Cannot save session_key", {details: err.message});
+  //     return serverError(res);
+  //   }
+  // }
 
   console.log({time: new Date().toLocaleString("id-ID"), decrypted_message: decrypted_message});
+
+  if (durations.length % 30 === 0) {
+      const mean = durations.reduce((a, b) => a + b) / durations.length;
+      const sorted = [...durations].sort((a, b) => a - b);
+      const median = sorted[Math.floor(sorted.length / 2)];
+      const std = Math.sqrt(durations.reduce((a, b) => a + (b - mean) ** 2, 0) / durations.length);
+      
+      console.log(`n=${durations.length} | mean=${mean.toFixed(3)}ms | median=${median.toFixed(3)}ms | std=${std.toFixed(3)}ms`);
+    }  
+    
   res.json({decryption: "Success"});
 });
 
-router.post('/telemetry2', (req, res) => {
-  // const response = {}
-  const {aad, nonce, ciphertext, tag} = req.body;
-  const {sensor_id, transmission_timestamp, encrypted_session_key} = JSON.parse(aad);
-  // console.log("aad: ", aad);
-  // console.log("aad (Buffer): ", Buffer.from(aad, 'base64'));
+// router.post('/telemetry2', (req, res) => {
+//   // const response = {}
+//   const {aad, nonce, ciphertext, tag} = req.body;
+//   const {sensor_id, transmission_timestamp, key} = JSON.parse(aad);
+//   // console.log("aad: ", aad);
+//   // console.log("aad (Buffer): ", Buffer.from(aad, 'base64'));
 
-  // checking id-nonce duplicate
-  try{
-    const insertNonceResult = insertNonce.run(sensor_id, nonce);
-    console.log(insertNonceResult)
-    // response.nonce_insertion = insertNonceResult
-  } catch (err) {
-    if (err.message.includes('UNIQUE constraint failed')) {
-      res.status(400).json({error: 'duplicate id-nonce pair' });
-    }
-    res.status(500).json({error: 'Error inserting nonce', details: err.message});
-  }
+//   // checking id-nonce duplicate
+//   try{
+//     const insertNonceResult = insertNonce.run(sensor_id, nonce);
+//     console.log(insertNonceResult)
+//     // response.nonce_insertion = insertNonceResult
+//   } catch (err) {
+//     if (err.message.includes('UNIQUE constraint failed')) {
+//       res.status(400).json({error: 'duplicate id-nonce pair' });
+//     }
+//     res.status(500).json({error: 'Error inserting nonce', details: err.message});
+//   }
 
-  // decrypt session key
-  let private_key;
-  try{
-    private_key = getLatestKey.get().private_key;
-  } catch (err) {
-    // console.error("Can't get latest private_key")
-    res.status(500).json({error: "Can't get latest private_key", details: err.message});
-  }
-  // console.log(private_key)
-  // console.log(encrypted_session_key)
-  const session_key = RSAUtils.decrypt(private_key, encrypted_session_key)
-  // console.log(nonce);
-  // console.log(typeof session_key);
-  // console.log(Buffer.isBuffer(session_key));
-  const decrypted_message = AESUtils.decrypt2(session_key, req.body)
-  console.log(decrypted_message)
-  res.json({ok: "ok"})
-});
+//   // decrypt session key
+//   let private_key;
+//   try{
+//     private_key = getLatestKey.get().private_key;
+//   } catch (err) {
+//     // console.error("Can't get latest private_key")
+//     res.status(500).json({error: "Can't get latest private_key", details: err.message});
+//   }
+//   // console.log(private_key)
+//   // console.log(encrypted_session_key)
+//   const session_key = RSAUtils.decrypt(private_key, encrypted_session_key)
+//   // console.log(nonce);
+//   // console.log(typeof session_key);
+//   // console.log(Buffer.isBuffer(session_key));
+//   const decrypted_message = AESUtils.decrypt2(session_key, req.body)
+//   console.log(decrypted_message)
+//   res.json({ok: "ok"})
+// });
 
 
 
