@@ -3,8 +3,31 @@ import RSAUtils from './rsaUtils.js';
 import AESUtils from './aesUtils.js';
 import { insertKey, getPairByPublic, getLatestKey, insertNonce, getNonce, getSessionKey, insertSessionKey } from '../data/queries.js';
 import { nanoid } from 'nanoid';
-import {RSA_PRIVATE_KEY, ECC_PRIVATE_KEY} from './cryptoConfig.js';
+// import { RSA_PRIVATE_KEY, ECC_PRIVATE_KEY } from '../certs/index.js'
 import ECCUtils from './eccUtils.js';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const thisFilePath = path.dirname(fileURLToPath(import.meta.url));
+const rsa_private_key_path = path.resolve(thisFilePath, '../certs/rsa_private_key.pem');
+const ecc_private_key_path = path.resolve(thisFilePath, '../certs/ecc_private_key.pem');
+
+let RSA_PRIVATE_KEY;
+try{
+  RSA_PRIVATE_KEY = fs.readFileSync(rsa_private_key_path, 'utf-8');
+  console.log('RSA private key successfully loaded');
+} catch(err){
+  console.error('RSA private key failed to load', {details: err.message});
+}
+
+let ECC_PRIVATE_KEY;
+try{
+  ECC_PRIVATE_KEY = fs.readFileSync(ecc_private_key_path, 'utf-8');
+  console.log('ECC private key successfully loaded');
+} catch(err){
+  console.error('ECC private key failed to load', {details: err.message});
+}
 
 function invalidRequest(res){
   return res.status(400).json({error: 'invalid request'});
@@ -169,11 +192,11 @@ router.post('/telemetry', (req, res) => {
       const sorted = [...durations].sort((a, b) => a - b);
       const median = sorted[Math.floor(sorted.length / 2)];
       const std = Math.sqrt(durations.reduce((a, b) => a + (b - mean) ** 2, 0) / durations.length);
-      
+      console.log(durations.join(','));
       console.log(`n=${durations.length} | mean=${mean.toFixed(3)}ms | median=${median.toFixed(3)}ms | std=${std.toFixed(3)}ms`);
     }  
-    
-  res.json({decryption: "Success"});
+  
+  res.json({decryption_duration: end-start});
 });
 
 // router.post('/telemetry2', (req, res) => {
