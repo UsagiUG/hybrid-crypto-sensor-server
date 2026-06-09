@@ -1,1 +1,5 @@
 cryptography
+requests
+numpy
+scipy
+pandas
