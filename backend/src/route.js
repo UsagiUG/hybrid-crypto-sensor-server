@@ -3,30 +3,29 @@ import RSAUtils from './rsaUtils.js';
 import AESUtils from './aesUtils.js';
 import { insertKey, getPairByPublic, getLatestKey, insertNonce, getNonce, getSessionKey, insertSessionKey } from '../data/queries.js';
 import { nanoid } from 'nanoid';
-// import { RSA_PRIVATE_KEY, ECC_PRIVATE_KEY } from '../certs/index.js'
 import ECCUtils from './eccUtils.js';
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
 const thisFilePath = path.dirname(fileURLToPath(import.meta.url));
-const rsa_private_key_path = path.resolve(thisFilePath, '../certs/rsa_private_key.pem');
-const ecc_private_key_path = path.resolve(thisFilePath, '../certs/ecc_private_key.pem');
+const rsaPrivateKeyPath = path.resolve(thisFilePath, '../certs/rsa_private_key.pem');
+const eccPrivateKeyPath = path.resolve(thisFilePath, '../certs/ecc_private_key.pem');
 
-let RSA_PRIVATE_KEY;
+let rsaPrivateKey;
 try{
-  RSA_PRIVATE_KEY = fs.readFileSync(rsa_private_key_path, 'utf-8');
+  rsaPrivateKey = fs.readFileSync(rsaPrivateKeyPath, 'utf-8');
   console.log('RSA private key successfully loaded');
 } catch(err){
-  console.error('RSA private key failed to load', {details: err.message});
+  console.error('RSA private key failed to load', {cause: err});
 }
 
-let ECC_PRIVATE_KEY;
+let eccPrivateKey;
 try{
-  ECC_PRIVATE_KEY = fs.readFileSync(ecc_private_key_path, 'utf-8');
+  eccPrivateKey = fs.readFileSync(eccPrivateKeyPath, 'utf-8');
   console.log('ECC private key successfully loaded');
 } catch(err){
-  console.error('ECC private key failed to load', {details: err.message});
+  console.error('ECC private key failed to load', {cause: err});
 }
 
 function invalidRequest(res){
@@ -44,70 +43,97 @@ router.get('/public-key', (req, res) => {
     const keys = getLatestKey.get()
     res.json({public_key: keys.public_key});
   } catch (err) {
-    res.status(500).json({error: 'Error obtaining latest key', details: err.message});
+    res.status(500).json({error: 'Error obtaining latest key', cause: err.message});
   }
 })
 
-
-function rsa(req, res) {
+function decryption(req) {
   const {aad, nonce, ciphertext, tag} = req.body;
   const {sensor_id, mode, transmission_timestamp, key} = aad;
-  let private_key;
-  let session_key;
+  let sessionKey;
+  if(mode === 'rsa') {
     try{
-      private_key = RSA_PRIVATE_KEY;
-    } catch (err) {
-      console.error("Can't get latest private_key", {details: err.message});
-      return serverError(res);
+      console.log({rsaPrivateKey: rsaPrivateKey});
+      sessionKey = RSAUtils.decrypt(rsaPrivateKey, key);
+    } catch(err) {
+      throw new Error("Can't decrypt encrypted session key with RSA private key", {cause: err});
     }
-    try{
-      session_key = RSAUtils.decrypt(private_key, key)
-    } catch (err) {
-      console.error("Can't decrypt session key", {details: err.message});
-      return invalidRequest(res);
+  } else {
+    try {
+      sessionKey = ECCUtils.decrypt(eccPrivateKey, key);
+    } catch(err) {
+      throw new Error("Can't compute session key with provided server's ECC private key and client's ECC ephemeral public key", {cause: err});
     }
-
-  // decrypt message
-  let decrypted_message;
-  try{
-    decrypted_message = AESUtils.decrypt(session_key, req.body)
-  } catch(err) {
-    console.error("Can't decrypt with this session_key", {details: err.message});
-    return invalidRequest(res);
   }
 
-  return decrypted_message;
-}
-
-function ecc(req, res) {
-  const {aad, nonce, ciphertext, tag} = req.body;
-  const {sensor_id, mode, transmission_timestamp, key} = aad;
-  let private_key;
-  let session_key;
-    try{
-      private_key = ECC_PRIVATE_KEY;
-    } catch (err) {
-      console.error("Can't get latest private_key", {details: err.message});
-      return serverError(res);
-    }
-    try{
-      session_key = ECCUtils.decrypt(private_key, key)
-    } catch (err) {
-      console.error("Can't decrypt session key", {details: err.message});
-      return invalidRequest(res);
-    }
-
-  // decrypt message
-  let decrypted_message;
-  try{
-    decrypted_message = AESUtils.decrypt(session_key, req.body)
+  let decryptedMessage;
+  // console.log({sessionKey: sessionKey, req: req.body});
+  try {
+    decryptedMessage = AESUtils.decrypt(sessionKey, req.body);
   } catch(err) {
-    console.error("Can't decrypt with this session_key", {details: err.message});
-    return invalidRequest(res);
+    throw new Error("Can't decrypt ciphertext or verify tag", {cause: err});
   }
 
-  return decrypted_message;
+  return decryptedMessage;
 }
+
+// function rsa(req, res) {
+//   const {aad, nonce, ciphertext, tag} = req.body;
+//   const {sensor_id, mode, transmission_timestamp, key} = aad;
+//   let private_key;
+//   let session_key;
+//     try{
+//       private_key = rsaPrivateKey;
+//     } catch (err) {
+//       console.error("Can't get latest private_key", {details: err.message});
+//       return serverError(res);
+//     }
+//     try{
+//       session_key = RSAUtils.decrypt(private_key, key)
+//     } catch (err) {
+//       console.error("Can't decrypt session key", {details: err.message});
+//       return invalidRequest(res);
+//     }
+
+//   // decrypt message
+//   let decrypted_message;
+//   try{
+//     decrypted_message = AESUtils.decrypt(session_key, req.body)
+//   } catch(err) {
+//     throw new Error("Can't decrypt with this session_key", {details: err});
+//     return invalidRequest(res);
+//   }
+
+//   return decrypted_message;
+// }
+
+// function ecc(req, res) {
+//   const {aad, nonce, ciphertext, tag} = req.body;
+//   const {sensor_id, mode, transmission_timestamp, key} = aad;
+//   let private_key;
+//   let session_key;
+//     try{
+//       private_key = eccPrivateKey;
+//     } catch (err) {
+//       throw new Error("Can't get latest private_key", {details: err});
+//       return serverError(res);
+//     }
+//     try{
+//       session_key = ECCUtils.decrypt(private_key, key)
+//     } catch (err) {
+//       throw new Error("Can't decrypt session key", {details: err});
+//       return invalidRequest(res);
+//     }
+
+//   // decrypt message
+//   let decrypted_message;
+//   decrypted_message = AESUtils.decrypt(session_key, req.body)
+//   if (!decrypted_message) {
+//     return;
+//   }
+
+//   return decrypted_message;
+// }
 
 const durations = [];
 
@@ -146,22 +172,28 @@ router.post('/telemetry', (req, res) => {
     return invalidRequest(res);
   }
 
-  let decrypted_message
-  if (mode === 'rsa') {
-    try {
-      decrypted_message = rsa(req, res)
-    } catch(err) {
-      console.error("error rsa", {details: err.message});
-      return serverError(res);
-    }
-  } else {
-    try {
-      decrypted_message = ecc(req, res)
-    } catch(err) {
-      console.error("error ecc", {details: err.message});
-      return serverError(res);
-    }
+  let decryptedMessage;
+  try {
+    decryptedMessage = decryption(req);
+  } catch(err) {
+    invalidRequest(res)
+    return console.log(err)
   }
+  // if (mode === 'rsa') {
+  //   try {
+  //     decrypted_message = rsa(req, res)
+  //   } catch(err) {
+  //     console.error("error rsa", {details: err.message});
+  //     return serverError(res);
+  //   }
+  // } else {
+  //   try {
+  //     decrypted_message = ecc(req, res)
+  //   } catch(err) {
+  //     console.error("error ecc", {details: err.message});
+  //     return serverError(res);
+  //   }
+  // }
   const end = performance.now();
   durations.push(end - start);
   
@@ -185,16 +217,16 @@ router.post('/telemetry', (req, res) => {
   //   }
   // }
 
-  console.log({time: new Date().toLocaleString("id-ID"), decrypted_message: decrypted_message});
+  console.log({time: new Date().toLocaleString("id-ID"), decryptedMessage: decryptedMessage});
 
-  if (durations.length % 30 === 0) {
-      const mean = durations.reduce((a, b) => a + b) / durations.length;
-      const sorted = [...durations].sort((a, b) => a - b);
-      const median = sorted[Math.floor(sorted.length / 2)];
-      const std = Math.sqrt(durations.reduce((a, b) => a + (b - mean) ** 2, 0) / durations.length);
-      console.log(durations.join(','));
-      console.log(`n=${durations.length} | mean=${mean.toFixed(3)}ms | median=${median.toFixed(3)}ms | std=${std.toFixed(3)}ms`);
-    }  
+  // if (durations.length % 30 === 0) {
+  //     const mean = durations.reduce((a, b) => a + b) / durations.length;
+  //     const sorted = [...durations].sort((a, b) => a - b);
+  //     const median = sorted[Math.floor(sorted.length / 2)];
+  //     const std = Math.sqrt(durations.reduce((a, b) => a + (b - mean) ** 2, 0) / durations.length);
+  //     console.log(durations.join(','));
+  //     console.log(`n=${durations.length} | mean=${mean.toFixed(3)}ms | median=${median.toFixed(3)}ms | std=${std.toFixed(3)}ms`);
+  //   }  
   
   res.json({decryption_duration: end-start});
 });
